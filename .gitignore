@@ -1,18 +1,29 @@
+# Temporary directories/files
+/tmp
+
 # Local .terraform directories
 **/.terraform/*
 
 # .tfstate files
-*.tfstate
-*.tfstate.*
+/*.tfstate
+/*.tfstate.*
+/state_backend.tf
+
+# .tfstate directories
+/.tfstate/
 
 # Crash log files
 crash.log
+
+# VCD log files
+go-vcloud-director.log
 
 # Ignore any .tfvars files that are generated automatically for each Terraform run. Most
 # .tfvars files are managed as part of configuration and so should be included in
 # version control.
 #
 # example.tfvars
+terraform.tfvars
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
@@ -27,3 +38,6 @@ override.tf.json
 
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
+
+# OS images
+*.ova
