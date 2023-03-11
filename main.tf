@@ -344,7 +344,7 @@ resource "vcd_vapp_vm" "wordpress" {
 # ======================================================================================================================
 # wait for virtual machine to be ready
 resource "time_sleep" "wait_for_vm" {
-  create_duration = "120s"
+  create_duration = "150s"
   depends_on      = [vcd_vapp_vm.wordpress]
 }
 # ======================================================================================================================
@@ -372,7 +372,8 @@ resource "null_resource" "config_data" {
         openssl req -x509 -nodes -newkey rsa:4096 -days 1 \
           -keyout "/opt/docker/letsencrypt/live/${var.dns_hostname}/privkey.pem" \
           -out "/opt/docker/letsencrypt/live/${var.dns_hostname}/fullchain.pem" \
-          -subj '/CN=localhost'
+          -subj '/CN=localhost' \
+          2>/dev/null
       fi
 
       # additional nginx configs
@@ -384,35 +385,47 @@ resource "null_resource" "config_data" {
       # main nginx config
       mkdir -p /opt/docker/nginx || true
       cat > /opt/docker/nginx/nginx.conf << 'EOF'
-      server {
-        listen 80;
-        server_name ${var.dns_hostname};
-        server_tokens off;
+      user nginx;
+      worker_processes auto;
 
-        location /.well-known/acme-challenge/ {
-          root /var/www/certbot;
-        }
+      error_log  /var/log/nginx/error.log warn;
+      pid        /var/run/nginx.pid;
 
-        location / {
-          return 301 https://$server_name$request_uri;
-        }
+      events {
+        worker_connections  1024;
       }
 
-      server {
-        listen 443 ssl;
-        server_name ${var.dns_hostname};
-        server_tokens off;
+      http {
+        server {
+          listen 80;
+          server_name ${var.dns_hostname};
+          server_tokens off;
 
-        ssl_certificate /etc/letsencrypt/live/${var.dns_hostname}/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/${var.dns_hostname}/privkey.pem;
-        include /etc/letsencrypt/options-ssl-nginx.conf;
-        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+          location /.well-known/acme-challenge/ {
+            root /etc/letsencrypt/www;
+          }
 
-        location / {
-          proxy_pass          http://wordpress:80;
-          proxy_set_header    Host                $http_host;
-          proxy_set_header    X-Real-IP           $remote_addr;
-          proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+          location / {
+            return 301 https://$server_name$request_uri;
+          }
+        }
+
+        server {
+          listen 443 ssl;
+          server_name ${var.dns_hostname};
+          server_tokens off;
+
+          ssl_certificate /etc/letsencrypt/live/${var.dns_hostname}/fullchain.pem;
+          ssl_certificate_key /etc/letsencrypt/live/${var.dns_hostname}/privkey.pem;
+          include /etc/letsencrypt/options-ssl-nginx.conf;
+          ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+          location / {
+            proxy_pass          http://wordpress:80;
+            proxy_set_header    Host                $http_host;
+            proxy_set_header    X-Real-IP           $remote_addr;
+            proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+          }
         }
       }
       EOF
