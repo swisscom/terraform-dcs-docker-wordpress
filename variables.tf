@@ -65,7 +65,7 @@ variable "vcd_template" {
 }
 
 # ======================================================================================================================
-# connectivity settings
+# network settings
 # ======================================================================================================================
 variable "dns_hostname" {
   description = "DNS hostname of your wordpress deployment (Fallback to <edgegateway-IP>.nip.io if missing)"
@@ -78,13 +78,6 @@ variable "dns_hostname" {
 variable "network_cidr" {
   description = "IP range for Kubernetes node network in CIDR notation"
   default     = "10.10.0.0/24"
-}
-
-variable "ssh_public_key" {
-  description = "SSH public key of all K8s nodes"
-}
-variable "ssh_private_key" {
-  description = "SSH private key of all K8s nodes"
 }
 
 # ======================================================================================================================

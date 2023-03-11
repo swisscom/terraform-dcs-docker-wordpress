@@ -41,3 +41,7 @@ override.tf.json
 
 # OS images
 *.ova
+
+# SSH keys
+ssh_key_id_rsa
+ssh_key_id_rsa.pub
