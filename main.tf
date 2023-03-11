@@ -350,6 +350,87 @@ resource "time_sleep" "wait_for_vm" {
 # ======================================================================================================================
 
 # ======================================================================================================================
+# create nginx and certbot configuration data
+resource "null_resource" "config_data" {
+  connection {
+    type        = "ssh"
+    user        = "wordpress"
+    private_key = file("ssh_key_id_rsa")
+    host        = data.vcd_edgegateway.edge_gateway.default_external_network_ip
+    port        = 2222
+    timeout     = "10m"
+  }
+
+  provisioner "file" {
+    destination = "/tmp/nginx_config.sh"
+    content     = <<-EOT
+      #!/bin/bash
+
+      # certbot folder structure and fake initial certs for nginx
+      mkdir -p "/opt/docker/letsencrypt/live/${var.dns_hostname}" || true
+      if [ ! -e "/opt/docker/letsencrypt/live/${var.dns_hostname}/fullchain.pem" ] || [ ! -e "/opt/docker/letsencrypt/live/${var.dns_hostname}/privkey.pem" ]; then
+        openssl req -x509 -nodes -newkey rsa:4096 -days 1 \
+          -keyout "/opt/docker/letsencrypt/live/${var.dns_hostname}/privkey.pem" \
+          -out "/opt/docker/letsencrypt/live/${var.dns_hostname}/fullchain.pem" \
+          -subj '/CN=localhost'
+      fi
+
+      # additional nginx configs
+      if [ ! -e /opt/docker/letsencrypt/options-ssl-nginx.conf ] || [ ! -e /opt/docker/letsencrypt/ssl-dhparams.pem ]; then
+        curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf > /opt/docker/letsencrypt/options-ssl-nginx.conf
+        curl -s https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem > /opt/docker/letsencrypt/ssl-dhparams.pem
+      fi
+
+      # main nginx config
+      mkdir -p /opt/docker/nginx || true
+      cat > /opt/docker/nginx/nginx.conf << 'EOF'
+      server {
+        listen 80;
+        server_name ${var.dns_hostname};
+        server_tokens off;
+
+        location /.well-known/acme-challenge/ {
+          root /var/www/certbot;
+        }
+
+        location / {
+          return 301 https://$server_name$request_uri;
+        }
+      }
+
+      server {
+        listen 443 ssl;
+        server_name ${var.dns_hostname};
+        server_tokens off;
+
+        ssl_certificate /etc/letsencrypt/live/${var.dns_hostname}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${var.dns_hostname}/privkey.pem;
+        include /etc/letsencrypt/options-ssl-nginx.conf;
+        ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+        location / {
+          proxy_pass          http://wordpress:80;
+          proxy_set_header    Host                $http_host;
+          proxy_set_header    X-Real-IP           $remote_addr;
+          proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+        }
+      }
+      EOF
+      EOT
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/nginx_config.sh",
+      "sudo /tmp/nginx_config.sh",
+    ]
+  }
+
+  depends_on = [time_sleep.wait_for_vm]
+}
+# ======================================================================================================================
+
+# ======================================================================================================================
 # configure docker provider
 provider "docker" {
   host     = "ssh://wordpress@${var.dns_hostname}:2222"
@@ -389,12 +470,12 @@ resource "docker_image" "nginx" {
 }
 
 resource "docker_volume" "mariadb" {
-  name       = "mariadb-volume"
+  name       = "mariadb"
   depends_on = [time_sleep.wait_for_vm]
 }
 
 resource "docker_network" "wordpress" {
-  name       = "wordpress-network"
+  name       = "wordpress"
   driver     = "bridge"
   depends_on = [time_sleep.wait_for_vm]
 }
@@ -410,15 +491,6 @@ resource "docker_container" "mariadb" {
 
   restart = "always"
   start   = true
-
-  # ports {
-  #   internal = 3306
-  #   external = 3306
-  # }
-  # ports {
-  #   internal = 33060
-  #   external = 33060
-  # }
 
   env = [
     "MYSQL_ROOT_PASSWORD=rootwordpress",
@@ -446,11 +518,6 @@ resource "docker_container" "wordpress" {
 
   restart = "always"
   start   = true
-
-  # ports {
-  #   internal = 80
-  #   external = 8080
-  # }
 
   env = [
     "WORDPRESS_DB_HOST=mariadb",
@@ -484,15 +551,24 @@ resource "docker_container" "nginx" {
     external = 8443
   }
 
-  env = [
-    "NGINX_HOST=${var.dns_hostname}",
-    "NGINX_PORT=80"
-  ]
+  volumes {
+    container_path = "/etc/nginx/nginx.conf"
+    host_path      = "/opt/docker/nginx/nginx.conf"
+    read_only      = true
+  }
+  volumes {
+    container_path = "/etc/letsencrypt/"
+    host_path      = "/opt/docker/letsencrypt"
+    read_only      = true
+  }
 
   networks_advanced {
     name = docker_network.wordpress.id
   }
 
-  depends_on = [docker_container.wordpress]
+  depends_on = [
+    docker_container.wordpress,
+    null_resource.config_data
+  ]
 }
 # ======================================================================================================================
