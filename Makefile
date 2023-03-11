@@ -20,6 +20,7 @@ check-env:
 	which terraform
 	test -f "ubuntu-22.04-server-cloudimg-amd64.ova" || wget https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova -O ubuntu-22.04-server-cloudimg-amd64.ova
 	test -f "ssh_key_id_rsa" || ssh-keygen -t rsa -b 4096 -f "ssh_key_id_rsa" -N ''
+	ssh-add "ssh_key_id_rsa"
 
 .PHONY: terraform-init
 ## terraform-init: initialize terraform

@@ -5,6 +5,10 @@ terraform {
       source  = "vmware/vcd"
       version = "~> 3.8.2"
     }
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0.1"
+    }
   }
   required_version = ">= 1.2.0"
 }
@@ -125,7 +129,7 @@ resource "vcd_nsxv_dnat" "http" {
   original_address   = data.vcd_edgegateway.edge_gateway.default_external_network_ip
   original_port      = 80
   translated_address = cidrhost(var.network_cidr, 10)
-  translated_port    = 80
+  translated_port    = 8080
   protocol           = "tcp"
 
   depends_on = [vcd_network_routed_v2.network]
@@ -139,7 +143,7 @@ resource "vcd_nsxv_dnat" "https" {
   original_address   = data.vcd_edgegateway.edge_gateway.default_external_network_ip
   original_port      = 443
   translated_address = cidrhost(var.network_cidr, 10)
-  translated_port    = 443
+  translated_port    = 8443
   protocol           = "tcp"
 
   depends_on = [vcd_network_routed_v2.network]
@@ -334,5 +338,161 @@ resource "vcd_vapp_vm" "wordpress" {
     vcd_nsxv_firewall_rule.ssh,
     vcd_nsxv_firewall_rule.web,
   ]
+}
+# ======================================================================================================================
+
+# ======================================================================================================================
+# wait for virtual machine to be ready
+resource "time_sleep" "wait_for_vm" {
+  create_duration = "120s"
+  depends_on      = [vcd_vapp_vm.wordpress]
+}
+# ======================================================================================================================
+
+# ======================================================================================================================
+# configure docker provider
+provider "docker" {
+  host     = "ssh://wordpress@${var.dns_hostname}:2222"
+  ssh_opts = ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", "ssh_key_id_rsa"]
+}
+
+# ======================================================================================================================
+# configure docker resources: images, networks, volumes
+data "docker_registry_image" "mariadb" {
+  name       = "mariadb:10-jammy"
+  depends_on = [time_sleep.wait_for_vm]
+}
+
+resource "docker_image" "mariadb" {
+  name          = data.docker_registry_image.mariadb.name
+  pull_triggers = [data.docker_registry_image.mariadb.sha256_digest]
+}
+
+data "docker_registry_image" "wordpress" {
+  name       = "wordpress:6-apache"
+  depends_on = [time_sleep.wait_for_vm]
+}
+
+resource "docker_image" "wordpress" {
+  name          = data.docker_registry_image.wordpress.name
+  pull_triggers = [data.docker_registry_image.wordpress.sha256_digest]
+}
+
+data "docker_registry_image" "nginx" {
+  name       = "nginx:1.23"
+  depends_on = [time_sleep.wait_for_vm]
+}
+
+resource "docker_image" "nginx" {
+  name          = data.docker_registry_image.nginx.name
+  pull_triggers = [data.docker_registry_image.nginx.sha256_digest]
+}
+
+resource "docker_volume" "mariadb" {
+  name       = "mariadb-volume"
+  depends_on = [time_sleep.wait_for_vm]
+}
+
+resource "docker_network" "wordpress" {
+  name       = "wordpress-network"
+  driver     = "bridge"
+  depends_on = [time_sleep.wait_for_vm]
+}
+# ======================================================================================================================
+
+# ======================================================================================================================
+# mariadb container
+resource "docker_container" "mariadb" {
+  name     = "mariadb"
+  image    = docker_image.mariadb.image_id
+  command  = ["--default-authentication-plugin=mysql_native_password"]
+  hostname = "mariadb"
+
+  restart = "always"
+  start   = true
+
+  # ports {
+  #   internal = 3306
+  #   external = 3306
+  # }
+  # ports {
+  #   internal = 33060
+  #   external = 33060
+  # }
+
+  env = [
+    "MYSQL_ROOT_PASSWORD=rootwordpress",
+    "MYSQL_DATABASE=wordpress",
+    "MYSQL_USER=wordpress",
+    "MYSQL_PASSWORD=wordpress"
+  ]
+
+  mounts {
+    target = "/var/lib/mysql"
+    source = docker_volume.mariadb.name
+    type   = "volume"
+  }
+
+  networks_advanced {
+    name = docker_network.wordpress.id
+  }
+}
+
+# wordpress container
+resource "docker_container" "wordpress" {
+  name     = "wordpress"
+  image    = docker_image.wordpress.image_id
+  hostname = "wordpress"
+
+  restart = "always"
+  start   = true
+
+  # ports {
+  #   internal = 80
+  #   external = 8080
+  # }
+
+  env = [
+    "WORDPRESS_DB_HOST=mariadb",
+    "WORDPRESS_DB_USER=wordpress",
+    "WORDPRESS_DB_PASSWORD=wordpress",
+    "WORDPRESS_DB_NAME=wordpress"
+  ]
+
+  networks_advanced {
+    name = docker_network.wordpress.id
+  }
+
+  depends_on = [docker_container.mariadb]
+}
+
+# nginx container
+resource "docker_container" "nginx" {
+  name     = "nginx"
+  image    = docker_image.nginx.image_id
+  hostname = "nginx"
+
+  restart = "always"
+  start   = true
+
+  ports {
+    internal = 80
+    external = 8080
+  }
+  ports {
+    internal = 443
+    external = 8443
+  }
+
+  env = [
+    "NGINX_HOST=${var.dns_hostname}",
+    "NGINX_PORT=80"
+  ]
+
+  networks_advanced {
+    name = docker_network.wordpress.id
+  }
+
+  depends_on = [docker_container.wordpress]
 }
 # ======================================================================================================================
