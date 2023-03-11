@@ -422,9 +422,10 @@ resource "null_resource" "config_data" {
 
           location / {
             proxy_pass          http://wordpress:80;
-            proxy_set_header    Host                $http_host;
-            proxy_set_header    X-Real-IP           $remote_addr;
-            proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+            proxy_set_header    Host                  $http_host;
+            proxy_set_header    X-Real-IP             $remote_addr;
+            proxy_set_header    X-Forwarded-For       $proxy_add_x_forwarded_for;
+            proxy_set_header    X-Forwarded-Proto     $scheme;
           }
         }
       }
@@ -583,5 +584,65 @@ resource "docker_container" "nginx" {
     docker_container.wordpress,
     null_resource.config_data
   ]
+}
+# ======================================================================================================================
+
+# ======================================================================================================================
+# configure certbot to manage letsencrypt certificates
+resource "null_resource" "certbot" {
+  connection {
+    type        = "ssh"
+    user        = "wordpress"
+    private_key = file("ssh_key_id_rsa")
+    host        = data.vcd_edgegateway.edge_gateway.default_external_network_ip
+    port        = 2222
+    timeout     = "10m"
+  }
+
+  provisioner "file" {
+    destination = "/tmp/certbot.sh"
+    content     = <<-EOT
+      #!/bin/bash
+
+      # certbot data does not yet exist?
+      if [ ! -e "/opt/docker/letsencrypt/www" ]; then
+        rm -rf /opt/docker/letsencrypt/live/* || true
+        rm -rf /opt/docker/letsencrypt/archive/* || true
+        rm -rf /opt/docker/letsencrypt/renewal/* || true
+
+        mkdir /opt/docker/letsencrypt/www || true
+        certbot certonly --webroot \
+          -w /opt/docker/letsencrypt/www \
+          -d "${var.dns_hostname}" \
+          --config-dir /opt/docker/letsencrypt \
+          --server "${var.lets_encrypt_server}" \
+          --rsa-key-size 4096 \
+          --register-unsafely-without-email \
+          --agree-tos \
+          --force-renewal
+      fi
+
+      mkdir -p /opt/docker || true
+      cat > /opt/docker/cert_renewal.sh << 'EOF'
+      certbot renew --config-dir /opt/docker/letsencrypt && docker restart nginx
+      EOF
+      chmod +x /opt/docker/cert_renewal.sh
+
+      crontab << EOF
+      15 3 * * * /opt/docker/cert_renewal.sh
+      EOF
+
+      docker restart nginx
+      EOT
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "chmod +x /tmp/certbot.sh",
+      "sudo /tmp/certbot.sh",
+    ]
+  }
+
+  depends_on = [docker_container.nginx]
 }
 # ======================================================================================================================
