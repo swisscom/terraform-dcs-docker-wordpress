@@ -68,11 +68,9 @@ variable "vcd_template" {
 # network settings
 # ======================================================================================================================
 variable "dns_hostname" {
-  description = "DNS hostname of your wordpress deployment (Fallback to <edgegateway-IP>.nip.io if missing)"
-  default     = ""
-  # The DNS "A" entry of your wordpress deployment's external edgegateway/loadbalancer IP.
-  # Please make sure to set an appropriate DNS entry after creating the edgegateway.
-  # If you do not set a value here, the terraform module will fallback to using <edgegateway-IP>.nip.io.
+  description = "DNS hostname of your wordpress deployment"
+  # The DNS "A" entry of your wordpress deployment's external edge gateway / loadbalancer IP.
+  # Please make sure to set an appropriate DNS entry after creating the edge gateway.
 }
 
 variable "network_cidr" {
