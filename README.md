@@ -20,11 +20,12 @@ Table of Contents
       * [API User](#api-user)
     - [Local CLI tools](#local-cli-tools)
   + [Configuration](#configuration)
+    - [Hostname](#hostname)
   + [Installation](#installation)
 
 ## WordPress with Docker
 
-This Terraform module supports you in deploying a WordPress installation with [Docker](https://www.docker.com/) on [Swisscom DCS+](https://www.swisscom.ch/en/business/enterprise/offer/cloud/cloudservices/dynamic-computing-services.html) infrastructure.
+This Terraform module supports you in deploying a WordPress installation with [Docker](https://www.docker.com/) on [Swisscom DCS+](https://www.swisscom.ch/en/business/enterprise/offer/cloud/cloudservices/dynamic-computing-services.html) infrastructure. Its purpose is to serve as an example to demonstrate how to use Terraform for [Infrastructure-as-Code](https://en.wikipedia.org/wiki/Infrastructure_as_code) provisioning of a collection of Docker containers on DCS+.
 
 It consists of two different submodules, [infrastructure](/infrastructure/) and [docker](/docker/).
 
@@ -96,6 +97,40 @@ This module has so far only been tested running under Linux and MacOSX. Your exp
 
 ### Configuration
 
+All possible configuration variables are specified in the [variables.tf](/variables.tf) file in the root of this repository. Most of them already have a sensible default value and only a small handful are required to be configured manually. For any such variable that does not have a default (or you want to set to a different value) you will have to create and add a configuration entry in your `terraform.tfvars` file (Also to be placed in the root of this repository).
 
+To get you started quickly there is also an example configuration file included, [terraform.example.tfvars](/terraform.example.tfvars), which contains the minimal set of variables required to use this Terraform module.
+
+```terraform
+vcd_api_url      = "https://vcd-pod-bravo.swisscomcloud.com/api"
+vcd_api_username = "api_vcd_my_username"
+vcd_api_password = "my_password"
+
+vcd_org         = "PRO-0123456789"
+vcd_vdc         = "my-data-center"
+vcd_edgegateway = "PRO-0123456789-my-gateway"
+
+dns_hostname = "my-wordpress.my-domain.com"
+```
+
+You can just copy this file over to `terraform.tfvars` and start editing it to fill in your values:
+```bash
+$ cp terraform.example.tfvars terraform.tfvars
+$ vim terraform.tfvars
+```
+
+#### Hostname
+
+The variable `dns_hostname` plays an important role in setting up your WordPress deployment. As part of the entire installation an Nginx reverse proxy will also be deployed and configured with that domain name as the server name / hostname it is serving, thus WordPress will become available under `https://<dns_hostname>`.
+
+In order for this to work correctly you should setup a new DNS **A** record for the hostname you want to be using, pointing it to the external/public IP of the Edge Gateway. Look for the IP in the vCloud Director web UI.
+
+For example, if you want to use `my-wordpress.my-domain.com`, the DNS entry would look something like this:
+```bash
+;; ANSWER SECTION:
+my-wordpress.my-domain.com. 600 IN A 147.5.206.13
+```
+
+> **Note**: If you do not configure `dns_hostname` properly then the WordPress deployment will fail and not work! A valid DNS **A** record is required for automated Let's Encrypt certificates and correctly working HTTPS traffic!
 
 ### Installation
