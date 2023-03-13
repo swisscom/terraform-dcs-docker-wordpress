@@ -80,3 +80,10 @@ docker-apply:
 docker-destroy:
 	cd docker && terraform destroy -var-file=../terraform.tfvars
 # ======================================================================================================================
+
+# ======================================================================================================================
+.PHONY: test
+## test: test wordpress deployment
+test:
+	curl -s https://$$(cat terraform.tfvars | grep 'dns_hostname' | awk '{print $$3;}' | tr -d '"') | grep '<title>docker-wordpress-demo</title>'
+# ======================================================================================================================

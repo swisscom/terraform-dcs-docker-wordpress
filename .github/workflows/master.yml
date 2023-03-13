@@ -1,0 +1,113 @@
+name: Deploy on DCS+
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  infrastructure:
+    name: 'infrastructure'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Terraform override
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_OVERRIDE_INFRASTRUCTURE: ${{ secrets.TF_OVERRIDE_INFRASTRUCTURE }}
+      run: echo "${TF_OVERRIDE_INFRASTRUCTURE}" > infrastructure/override.tf
+
+    - name: Setup Terraform tfvars
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_TFVARS: ${{ secrets.TF_TFVARS }}
+      run: echo "${TF_TFVARS}" > terraform.tfvars
+
+    - name: Setup Terraform CLI
+      uses: hashicorp/setup-terraform@v2
+      with:
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+        terraform_version: ~1.2.8
+
+    - name: Terraform Format
+      if: github.ref == 'refs/heads/master'
+      run: make infrastructure
+
+    - name: Cleanup
+      if: ${{ always() }}
+      run: |
+        rm -f terraform.tfvars || true
+        rm -f infrastructure/override.tf || true
+
+  docker:
+    name: 'docker'
+    needs: [ infrastructure ]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Terraform override
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_OVERRIDE_DOCKER: ${{ secrets.TF_OVERRIDE_DOCKER }}
+      run: echo "${TF_OVERRIDE_DOCKER}" > docker/override.tf
+
+    - name: Setup Terraform tfvars
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_TFVARS: ${{ secrets.TF_TFVARS }}
+      run: echo "${TF_TFVARS}" > terraform.tfvars
+
+    - name: Setup Terraform CLI
+      uses: hashicorp/setup-terraform@v2
+      with:
+        cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+        terraform_version: ~1.2.8
+
+    - name: Terraform Format
+      if: github.ref == 'refs/heads/master'
+      run: make docker
+
+    - name: Cleanup
+      if: ${{ always() }}
+      run: |
+        rm -f terraform.tfvars || true
+        rm -f docker/override.tf || true
+
+  test:
+    name: 'test'
+    needs: [ docker ]
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Setup Terraform tfvars
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_TFVARS: ${{ secrets.TF_TFVARS }}
+      run: echo "${TF_TFVARS}" > terraform.tfvars
+
+    - name: Run tests
+      if: github.ref == 'refs/heads/master'
+      run: make test
+
+    - name: Cleanup
+      if: ${{ always() }}
+      run: |
+        rm -f terraform.tfvars || true

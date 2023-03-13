@@ -24,7 +24,7 @@ It consists of two different submodules, [infrastructure](/infrastructure/) and 
 
 The **infrastructure** module will provision resources on DCS+ and setup a private internal network (10.10.0.0/24 CIDR by default), attach an Edge Gateway with an external public IP, configure NAT and firewall services, setup a virtual machine, attach it to the private network, and then install and configure Docker on it.
 
-The **docker** module will then connect via SSH to the Docker host and deploy a WordPress container, along with MariaDB and Nginx on it. It will also setup automatic TLS certificates using [certbot](https://certbot.eff.org/) and [Let's Encrypt](https://letsencrypt.org/).
+The **docker** module will then connect via SSH to the Docker host and deploy a WordPress container, along with MariaDB and Nginx on it. It will also setup automatic TLS certificates using certbot and Let's Encrypt.
 
 The final result is a fully functioning WordPress deployment, having MariaDB as a database backend, accessible via HTTPS and with automatic TLS certificate management.
 
