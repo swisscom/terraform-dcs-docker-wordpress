@@ -31,6 +31,15 @@ jobs:
         TF_TFVARS: ${{ secrets.TF_TFVARS }}
       run: echo "${TF_TFVARS}" > terraform.tfvars
 
+    - name: Setup SSH keys
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_SSHKEY: ${{ secrets.TF_SSHKEY }}
+        TF_SSHKEY_PUB: ${{ secrets.TF_SSHKEY_PUB }}
+      run: |
+        echo "${TF_SSHKEY}" > ssh_key_id_rsa
+        echo "${TF_SSHKEY_PUB}" > ssh_key_id_rsa.pub
+
     - name: Setup Terraform CLI
       uses: hashicorp/setup-terraform@v2
       with:
@@ -45,6 +54,8 @@ jobs:
       if: ${{ always() }}
       run: |
         rm -f terraform.tfvars || true
+        rm -f ssh_key_id_rsa || true
+        rm -f ssh_key_id_rsa.pub || true
         rm -f infrastructure/override.tf || true
 
   docker:
@@ -70,6 +81,15 @@ jobs:
         TF_TFVARS: ${{ secrets.TF_TFVARS }}
       run: echo "${TF_TFVARS}" > terraform.tfvars
 
+    - name: Setup SSH keys
+      if: github.ref == 'refs/heads/master'
+      env:
+        TF_SSHKEY: ${{ secrets.TF_SSHKEY }}
+        TF_SSHKEY_PUB: ${{ secrets.TF_SSHKEY_PUB }}
+      run: |
+        echo "${TF_SSHKEY}" > ssh_key_id_rsa
+        echo "${TF_SSHKEY_PUB}" > ssh_key_id_rsa.pub
+
     - name: Setup Terraform CLI
       uses: hashicorp/setup-terraform@v2
       with:
@@ -84,6 +104,8 @@ jobs:
       if: ${{ always() }}
       run: |
         rm -f terraform.tfvars || true
+        rm -f ssh_key_id_rsa || true
+        rm -f ssh_key_id_rsa.pub || true
         rm -f docker/override.tf || true
 
   test:
