@@ -31,6 +31,12 @@ jobs:
         TF_TFVARS: ${{ secrets.TF_TFVARS }}
       run: echo "${TF_TFVARS}" > terraform.tfvars
 
+    - name: Setup SSH agent
+      uses: webfactory/ssh-agent@v0.7.0
+      if: github.ref == 'refs/heads/master'
+      with:
+        ssh-private-key: ${{ secrets.TF_SSHKEY }}
+
     - name: Setup SSH keys
       if: github.ref == 'refs/heads/master'
       env:
@@ -80,6 +86,12 @@ jobs:
       env:
         TF_TFVARS: ${{ secrets.TF_TFVARS }}
       run: echo "${TF_TFVARS}" > terraform.tfvars
+
+    - name: Setup SSH agent
+      uses: webfactory/ssh-agent@v0.7.0
+      if: github.ref == 'refs/heads/master'
+      with:
+        ssh-private-key: ${{ secrets.TF_SSHKEY }}
 
     - name: Setup SSH keys
       if: github.ref == 'refs/heads/master'
