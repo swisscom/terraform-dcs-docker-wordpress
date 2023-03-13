@@ -22,7 +22,7 @@ destroy: docker-destroy infrastructure-destroy
 ## check-env: verifies working environment meets all requirements
 check-env:
 	which terraform
-	test -f "infrastructure/ubuntu-22.04-server-cloudimg-amd64.ova" || wget -q https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova -O "infrastructure/ubuntu-22.04-server-cloudimg-amd64.ova"
+	test -f "infrastructure/ubuntu-22.04-server-cloudimg-amd64.ova" || curl -s https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.ova > "infrastructure/ubuntu-22.04-server-cloudimg-amd64.ova"
 	test -f "ssh_key_id_rsa" || ssh-keygen -t rsa -b 4096 -f "ssh_key_id_rsa" -N ''
 	ssh-add "ssh_key_id_rsa" || true
 # ======================================================================================================================
@@ -86,4 +86,5 @@ docker-destroy:
 ## test: test wordpress deployment
 test:
 	curl -s https://$$(cat terraform.tfvars | grep 'dns_hostname' | awk '{print $$3;}' | tr -d '"') | grep '<title>docker-wordpress-demo</title>'
+	curl -s https://$$(cat terraform.tfvars | grep 'dns_hostname' | awk '{print $$3;}' | tr -d '"') | grep 'Proudly powered by <a href="https://wordpress.org" rel="nofollow">WordPress</a>'
 # ======================================================================================================================
