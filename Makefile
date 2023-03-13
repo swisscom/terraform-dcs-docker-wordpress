@@ -35,7 +35,7 @@ infrastructure: check-env infrastructure-init infrastructure-apply
 .PHONY: infrastructure-init
 ## infrastructure-init: initialize terraform
 infrastructure-init:
-	cd infrastructure && terraform init -var-file=../terraform.tfvars
+	cd infrastructure && terraform init
 
 .PHONY: infrastructure-check
 ## infrastructure-check: validate and check terraform configuration
@@ -62,7 +62,7 @@ docker: check-env docker-init docker-apply
 .PHONY: docker-init
 ## docker-init: initialize terraform
 docker-init:
-	cd docker && terraform init -var-file=../terraform.tfvars
+	cd docker && terraform init
 
 .PHONY: docker-check
 ## docker-check: validate and check terraform configuration
