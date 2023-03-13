@@ -19,6 +19,10 @@ provider "docker" {
 # ======================================================================================================================
 # create nginx and certbot configuration data
 resource "null_resource" "config_data" {
+  # triggers = {
+  #   always_run = "${timestamp()}"
+  # }
+
   connection {
     type        = "ssh"
     user        = "wordpress"
@@ -248,6 +252,10 @@ resource "docker_container" "nginx" {
 # ======================================================================================================================
 # configure certbot to manage letsencrypt certificates
 resource "null_resource" "certbot" {
+  # triggers = {
+  #   always_run = "${timestamp()}"
+  # }
+
   connection {
     type        = "ssh"
     user        = "wordpress"
@@ -282,12 +290,14 @@ resource "null_resource" "certbot" {
 
       mkdir -p /opt/docker || true
       cat > /opt/docker/cert_renewal.sh << 'EOF'
+      #!/bin/bash
+
       certbot renew --config-dir /opt/docker/letsencrypt && docker restart nginx
       EOF
       chmod +x /opt/docker/cert_renewal.sh
 
       crontab << EOF
-      15 3 * * * /opt/docker/cert_renewal.sh
+      15 3 * * * /opt/docker/cert_renewal.sh >/dev/null 2>&1
       EOF
 
       docker restart nginx
