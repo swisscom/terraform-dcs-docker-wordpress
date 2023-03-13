@@ -156,7 +156,15 @@ Alternatively you could also just run `make all` to run all steps in one command
 
 The first run is likely going to take quite a bit of time to finish, up to 10 minutes, as it needs to create a lot of new resources on DCS+. Just let it run until it finishes.
 
-Once Terraform has finished provisioning your deployment, you can now run `make test` to check if it works as expected:
+At the end you should see something like this in the output:
+```
+Outputs:
+
+wordpress_url = "https://my-wordpress.my-domain.com"
+```
+The `wordpress_url` is the URL under which your new WordPress installation is now reachable.
+
+Once Terraform has finished provisioning your deployment, you can also run `make test` to check if it works as expected:
 ```bash
 $ make test
 ```
