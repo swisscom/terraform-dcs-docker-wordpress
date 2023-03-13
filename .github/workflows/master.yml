@@ -45,6 +45,8 @@ jobs:
       run: |
         echo "${TF_SSHKEY}" > ssh_key_id_rsa
         echo "${TF_SSHKEY_PUB}" > ssh_key_id_rsa.pub
+        chmod 600 ssh_key_id_rsa
+        chmod 600 ssh_key_id_rsa.pub
 
     - name: Setup Terraform CLI
       uses: hashicorp/setup-terraform@v2
@@ -52,7 +54,7 @@ jobs:
         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
         terraform_version: ~1.2.8
 
-    - name: Terraform Format
+    - name: Run Terraform
       if: github.ref == 'refs/heads/master'
       run: make infrastructure
 
@@ -101,6 +103,8 @@ jobs:
       run: |
         echo "${TF_SSHKEY}" > ssh_key_id_rsa
         echo "${TF_SSHKEY_PUB}" > ssh_key_id_rsa.pub
+        chmod 600 ssh_key_id_rsa
+        chmod 600 ssh_key_id_rsa.pub
 
     - name: Setup Terraform CLI
       uses: hashicorp/setup-terraform@v2
@@ -108,7 +112,7 @@ jobs:
         cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
         terraform_version: ~1.2.8
 
-    - name: Terraform Format
+    - name: Run Terraform
       if: github.ref == 'refs/heads/master'
       run: make docker
 
