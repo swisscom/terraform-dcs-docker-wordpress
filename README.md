@@ -11,6 +11,7 @@ Deploy Wordpress with Docker on vCloud / [Swisscom DCS+](https://dcsguide.scapp.
 Table of Contents
 =================
 * [WordPress with Docker](#wordpress-with-docker)
+  + [Architecture](#architecture)
   + [Components](#components)
 * [How to deploy](#how-to-deploy)
   + [Requirements](#requirements)
@@ -34,6 +35,9 @@ The **infrastructure** module will provision resources on DCS+ and setup a priva
 The **docker** module will then connect via SSH to the Docker host and deploy a WordPress container, along with MariaDB and Nginx on it. It will also setup automatic TLS certificates using certbot and Let's Encrypt.
 
 The final result is a fully functioning WordPress deployment, having MariaDB as a database backend, accessible via HTTPS and with automatic TLS certificate management.
+
+### Architecture
+![DCS+ WordPress Docker Architecture](https://raw.githubusercontent.com/JamesClonk/terraform-vcloud-docker-wordpress/data/dcs_docker.png)
 
 ### Components
 
