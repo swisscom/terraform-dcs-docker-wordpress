@@ -116,7 +116,7 @@ resource "null_resource" "config_data" {
 # ======================================================================================================================
 # configure docker resources: images, networks, volumes
 data "docker_registry_image" "mariadb" {
-  name       = "mariadb:10-jammy"
+  name       = var.docker_image_mariadb
   depends_on = [null_resource.config_data]
 }
 
@@ -126,7 +126,7 @@ resource "docker_image" "mariadb" {
 }
 
 data "docker_registry_image" "wordpress" {
-  name       = "wordpress:6-apache"
+  name       = var.docker_image_wordpress
   depends_on = [null_resource.config_data]
 }
 
@@ -136,7 +136,7 @@ resource "docker_image" "wordpress" {
 }
 
 data "docker_registry_image" "nginx" {
-  name       = "nginx:1.23"
+  name       = var.docker_image_nginx
   depends_on = [null_resource.config_data]
 }
 

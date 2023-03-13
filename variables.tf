@@ -105,3 +105,21 @@ variable "lets_encrypt_server" {
   # Only set this to the staging environment if you want to do frequent development or testing.
   # See https://letsencrypt.org/docs/staging-environment/
 }
+
+# ======================================================================================================================
+# docker images
+# ======================================================================================================================
+variable "docker_image_mariadb" {
+  description = "Docker image to use for MariaDB container"
+  default     = "mariadb:10-jammy"
+}
+
+variable "docker_image_wordpress" {
+  description = "Docker image to use for WordPress container"
+  default     = "wordpress:6-apache"
+}
+
+variable "docker_image_nginx" {
+  description = "Docker image to use for Nginx container"
+  default     = "nginx:1.23"
+}
