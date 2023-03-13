@@ -92,6 +92,7 @@ For deploying this Terraform module you will need to have all the following CLI 
 - [terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
 - [curl](https://curl.se/)
 - [git](https://git-scm.com/)
+- [make](https://www.gnu.org/software/make/)
 
 This module has so far only been tested running under Linux and MacOSX. Your experience with Windows tooling may vary.
 
@@ -134,3 +135,28 @@ my-wordpress.my-domain.com. 600 IN A 147.5.206.13
 > **Note**: If you do not configure `dns_hostname` properly then the WordPress deployment will fail and not work! A valid DNS **A** record is required for automated Let's Encrypt certificates and correctly working HTTPS traffic!
 
 ### Installation
+
+Install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) on your machine if you do not have it already. See the section about [local CLI tools](#local-cli-tools) above for all required tools needed.
+
+After you have configured `terraform.tfstate` you can use the provided `Makefile` to run all deployment steps automatically.
+
+To provision the infrastructure, network, VM, etc., run `make infrastructure`, and type `yes` and hit Enter to proceed:
+```bash
+$ make infrastructure
+```
+If this is your first run this will likely show you a huge list of changes and missing resources. Everything shown here is what Terraform will create for you in order to provision all the necessary infrastructure on DCS+.
+
+To provision the Docker deployments of WordPress, MariaDB and Nginx, run `make docker`, and type `yes` and hit Enter to proceed:
+```bash
+$ make docker
+```
+Now Terraform will create all the necessary Docker configuration and deploy the container. This will also setup a crontab entry for `certbot` to automatically renew the TLS certificate before it expires.
+
+Alternatively you could also just run `make all` to run all steps in one command.
+
+The first run is likely going to take quite a bit of time to finish, up to 10 minutes, as it needs to create a lot of new resources on DCS+. Just let it run until it finishes.
+
+Once Terraform has finished provisioning your deployment, you can now run `make test` to check if it works as expected:
+```bash
+$ make test
+```
