@@ -142,7 +142,7 @@ my-wordpress.my-domain.com. 600 IN A 147.5.206.13
 
 Install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli) on your machine if you do not have it already. See the section about [local CLI tools](#local-cli-tools) above for all required tools needed.
 
-After you have configured `terraform.tfstate` you can use the provided `Makefile` to run all deployment steps automatically.
+After you have configured `terraform.tfvars` you can use the provided `Makefile` to run all deployment steps automatically.
 
 To provision the infrastructure, network, VM, etc., run `make infrastructure`, and type `yes` and hit Enter to proceed:
 ```bash
